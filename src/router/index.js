@@ -79,7 +79,7 @@ export const constantRoutes = [
         path: 'dashboard',
         component: () => import('@/views/dashboard/index'),
         name: 'Dashboard',
-        meta: { title: 'Dashboard', icon: 'dashboard', affix: true }
+        meta: { title: '仓库地图', icon: 'dashboard', affix: true }
       }
     ]
   },
@@ -108,19 +108,6 @@ export const constantRoutes = [
   //     }
   //   ]
   // },
-  {
-    path: '/plant-overview',
-    component: Layout,
-    redirect: '/plant-overview/index',
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/plant-overview/index'),
-        name: 'PlantOverview',
-        meta: { title: '仓库监控', icon: 'guide', noCache: true }
-      }
-    ]
-  },
   {
     path: '/profile',
     component: Layout,

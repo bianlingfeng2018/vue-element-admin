@@ -1,10 +1,10 @@
 <template>
   <div :class="classObj" class="app-wrapper">
     <div v-if="device==='mobile'&&sidebar.opened" class="drawer-bg" @click="handleClickOutside" />
-    <sidebar class="sidebar-container" />
+    <!--    <sidebar class="sidebar-container" />-->
     <div :class="{hasTagsView:needTagsView}" class="main-container">
       <div :class="{'fixed-header':fixedHeader}">
-        <navbar />
+        <!--        <navbar />-->
         <tags-view v-if="needTagsView" />
       </div>
       <app-main />
@@ -17,7 +17,7 @@
 
 <script>
 import RightPanel from '@/components/RightPanel'
-import { AppMain, Navbar, Settings, Sidebar, TagsView } from './components'
+import { AppMain, Settings, TagsView } from './components'
 import ResizeMixin from './mixin/ResizeHandler'
 import { mapState } from 'vuex'
 
@@ -25,10 +25,10 @@ export default {
   name: 'Layout',
   components: {
     AppMain,
-    Navbar,
+    // Navbar,
     RightPanel,
     Settings,
-    Sidebar,
+    // Sidebar,
     TagsView
   },
   mixins: [ResizeMixin],
