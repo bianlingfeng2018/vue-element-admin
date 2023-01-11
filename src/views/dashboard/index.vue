@@ -34,11 +34,24 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js'
 import {
-  getAmbientLight, getBase, getBin, getBoard,
-  getCamera, getControl, getConveyor, getDirectLight,
-  getFloor, getHouse, getRack, getRackGroup,
-  getRenderer, getScene, getShuttle, getStick
+  getAmbientLight,
+  getBase,
+  getBin,
+  getBoard,
+  getCamera,
+  getControl,
+  getConveyor,
+  getDirectLight,
+  getFloor,
+  getHouse,
+  getRack,
+  getRackGroup,
+  getRenderer,
+  getScene,
+  getShuttle,
+  getStick
 } from '@/views/dashboard/js/Common'
+import { queryVehiclesState } from '@/api/asrs-sync'
 
 export default {
   name: 'Dashboard',
@@ -57,11 +70,53 @@ export default {
     ])
   },
   created() {
+    this.periodFetchData()
   },
   mounted() {
     this.$nextTick(this.init)
   },
   methods: {
+    periodFetchData() {
+      const this_ = this
+      setInterval(function() {
+        queryVehiclesState()
+          .then(res => {
+            console.log(res)
+            for (const vehicleState of res) {
+              const name = vehicleState.name
+              const triple = vehicleState.currentPrecisePosition
+              if (triple != null) {
+                this_.updateVehiclePosition(name, triple)
+              }
+            }
+          })
+          .catch(reason => {
+            console.log(reason)
+          })
+      }, 1000)
+    },
+    updateVehiclePosition(name, pos) {
+      console.log('更新 ' + name + '位置 ' + pos.x + ',' + pos.y + ',' + pos.z)
+      const vehicleMesh = window.getVehicleByName(name)
+      console.log('vehicle = ' + vehicleMesh)
+      const srcX = Number(pos.x)
+      const srcY = Number(pos.y)
+      const srcZ = Number(pos.z)
+      // 重置位置相关参数
+      const c = srcX + 1
+      const l = srcZ + 1
+      const r = srcY + 1
+      const { x, y, z } = window.getAGVPosition(c, l, r)
+      this.updateObjPosition(vehicleMesh, x, y, z)
+    },
+    updateObjPosition(obj, x, y, z, q) {
+      obj.position.x = x
+      obj.position.y = y
+      obj.position.z = z
+      if (q != null) {
+        obj.quaternion.copy(q)
+      }
+    },
     // 工具
     handleSimControl() {
 
@@ -82,7 +137,7 @@ export default {
     // },
     init() {
       // 变量
-      const debug = true
+      const debug = false
       let modelLoaded = false
       let canMoveByCircle = true
 
@@ -306,8 +361,17 @@ export default {
       const shuttleW = 40
       const shuttleH = 5
       const shuttleD = 40
-      // const shuttle1 = addShuttle(1, 1, 1, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD)
-      const testShuttle = addShuttle(initColumn, initLayer, initRank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD)
+      const shuttle001 = addShuttle(1, 2, 1, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
+      const testShuttle = addShuttle(initColumn, initLayer, initRank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
+
+      window.getVehicleByName = function getVehicleByName(name) {
+        if (name === 'Vehicle001') {
+          return shuttle001
+        } else if (name === 'Vehicle002') {
+          return testShuttle
+        }
+        return null
+      }
 
       // 货架上的货物
       const binD = 30
@@ -339,7 +403,7 @@ export default {
       const testBinY = inputBinY1
       const testBinZ = inputBinZ1
       const testBinMesh = getBin(THREE, 0, 0, 0, binD, binD, binD, binTx)
-      updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ)
+      this.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ)
       const testBinInitQuaternion = testBinMesh.quaternion.clone()
       scene.add(testBinMesh)
 
@@ -469,14 +533,14 @@ export default {
         controls.update()
       }
 
-      function updateObjPosition(obj, x, y, z, q) {
-        obj.position.x = x
-        obj.position.y = y
-        obj.position.z = z
-        if (q != null) {
-          obj.quaternion.copy(q)
-        }
-      }
+      // window.updateObjPosition = function updateObjPosition(obj, x, y, z, q) {
+      //   obj.position.x = x
+      //   obj.position.y = y
+      //   obj.position.z = z
+      //   if (q != null) {
+      //     obj.quaternion.copy(q)
+      //   }
+      // }
 
       function updateCurvePathPosition(obj, curvePath, fraction, axis, up, yOffset) {
         if (fraction > 1) fraction = 0
@@ -503,11 +567,11 @@ export default {
         scene.add(binMesh)
       }
 
-      function addShuttle(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD) {
+      function addShuttle(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, color) {
         const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + rackWidth / 2
         const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + shuttleH / 2
         const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval / 2
-        const shuttleMesh = getShuttle(THREE, initX, initY, initZ, shuttleW, shuttleH, shuttleD)
+        const shuttleMesh = getShuttle(THREE, initX, initY, initZ, shuttleW, shuttleH, shuttleD, color)
         scene.add(shuttleMesh)
         return shuttleMesh
       }
@@ -599,14 +663,14 @@ export default {
       window.onLoadForRGV = function onLoadForRGV() {
         if (!RGVRunning) {
           console.log(RGV.quaternion)
-          updateObjPosition(testBinMesh, RGV.position.x, testBinY + baseHeight, RGV.position.z, RGV.quaternion)
+          this.updateObjPosition(testBinMesh, RGV.position.x, testBinY + baseHeight, RGV.position.z, RGV.quaternion)
         }
         RGVLoaded = true
       }
 
       window.onUnloadForRGV = function onUnloadForRGV() {
         RGVLoaded = false
-        updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ, testBinInitQuaternion)
+        this.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ, testBinInitQuaternion)
       }
 
       window.onUnloadToConveyorForRGV = function onUnloadToConveyorForRGV() {
@@ -616,7 +680,7 @@ export default {
           y: conveyorY + boardHeight / 2 + binD / 2,
           z: conveyorZ2
         }
-        updateObjPosition(testBinMesh, pos.x, pos.y, pos.z, testBinInitQuaternion)
+        this.updateObjPosition(testBinMesh, pos.x, pos.y, pos.z, testBinInitQuaternion)
         const t1 = new TWEEN.Tween(pos)
           .to({
             x: elevatorX + elevatorWidth / 2 + binD / 2,
@@ -648,7 +712,7 @@ export default {
 
       // 提升机加载货物、卸载货物
       window.onLoadForElevator = function onLoadForElevator() {
-        updateObjPosition(testBinMesh, elevatorMesh2.position.x, elevatorMesh2.position.y + boardHeight / 2 + binD / 2,
+        this.updateObjPosition(testBinMesh, elevatorMesh2.position.x, elevatorMesh2.position.y + boardHeight / 2 + binD / 2,
           elevatorMesh2.position.z, elevatorMesh2.quaternion)
         ElevatorLoaded = true
       }
@@ -736,7 +800,7 @@ export default {
       }
 
       window.onLoadForAGV = function onLoadForAGV() {
-        updateObjPosition(testBinMesh, testShuttle.position.x, testShuttle.position.y + shuttleH / 2 + binD / 2, testShuttle.position.z, null)
+        this.updateObjPosition(testBinMesh, testShuttle.position.x, testShuttle.position.y + shuttleH / 2 + binD / 2, testShuttle.position.z, null)
         AGVLoaded = true
       }
 
@@ -756,10 +820,10 @@ export default {
       }
       window.setAGVOnElevator = function() {
         const { x, y, z } = elevatorMesh2.position
-        updateObjPosition(testShuttle, x, y + boardHeight / 2, z)
+        this.updateObjPosition(testShuttle, x, y + boardHeight / 2, z)
         ElevatorLoadedShutter = true
         if (AGVLoaded) {
-          updateObjPosition(testBinMesh, x, y + boardHeight / 2 + shuttleH + binD / 2, z)
+          this.updateObjPosition(testBinMesh, x, y + boardHeight / 2 + shuttleH + binD / 2, z)
           ElevatorLoadedBin = true
         }
       }
@@ -773,8 +837,8 @@ export default {
         const l = srcZ + 1
         const r = srcY + 1
         updateAGVPosition(c, l, r)
-        const { x, y, z } = getAGVPosition(c, l, r)
-        updateObjPosition(testShuttle, x, y, z)
+        const { x, y, z } = window.getAGVPosition(c, l, r)
+        this.updateObjPosition(testShuttle, x, y, z)
 
         if (AGVLoaded) {
           // setBinCoord(pos)
@@ -790,8 +854,8 @@ export default {
         const l = srcZ + 1
         const r = srcY + 1
         updateAGVPosition(c, l, r)
-        const { x, y, z } = getAGVPosition(c, l, r)
-        updateObjPosition(testBinMesh, x, y + shuttleH / 2 + binD / 2, z)
+        const { x, y, z } = window.getAGVPosition(c, l, r)
+        this.updateObjPosition(testBinMesh, x, y + shuttleH / 2 + binD / 2, z)
       }
       window.move = function move(src, dest) {
         console.log(src)
@@ -846,13 +910,13 @@ export default {
       }
 
       function moveAGVAndBin(column, layer, rank) {
-        new TWEEN.Tween(testShuttle.position).to(getAGVPosition(column, layer, rank), 2000).start()
+        new TWEEN.Tween(testShuttle.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
         if (AGVLoaded) {
           new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
         }
       }
 
-      function getAGVPosition(column, layer, rank) {
+      window.getAGVPosition = function getAGVPosition(column, layer, rank) {
         return getPositionOfShuttle(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
       }
 

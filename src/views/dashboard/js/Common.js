@@ -151,10 +151,10 @@ export function getBin(THREE, x, y, z, binWidth, binHeight, binDepth, binTx) {
   return binMesh
 }
 
-export function getShuttle(THREE, x, y, z, w, h, d) {
+export function getShuttle(THREE, x, y, z, w, h, d, c) {
   const geometry = new THREE.BoxGeometry(w, h, d, 1, 1, 1)
   const material = new THREE.MeshPhongMaterial({
-    color: 0xAFB1B3,
+    color: c,
     emissive: 0x000000,
     side: THREE.DoubleSide
   })
