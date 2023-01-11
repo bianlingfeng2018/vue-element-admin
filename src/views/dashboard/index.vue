@@ -10,14 +10,120 @@
     <el-card class="box-card" shadow="never" style="position: absolute; left: 10px; top: 10px; border: none; background: transparent">
       <el-button-group style="opacity: 0.7">
         <el-button type="default" icon="el-icon-edit" @click="handleSimControl()">仿真控制</el-button>
-        <el-button type="default" icon="el-icon-share" @click="handleCreateOrder()">创建任务</el-button>
+        <!--        <el-button type="default" icon="el-icon-share" @click="handleCreateOrder()">创建任务</el-button>-->
         <el-button type="default" icon="el-icon-refresh" @click="refresh()">刷新</el-button>
       </el-button-group>
     </el-card>
 
     <el-drawer
-      title="我是标题"
-      :visible.sync="drawer"
+      title="仿真控制"
+      :visible.sync="drawer1"
+      :direction="direction"
+      :size="'50%'"
+    >
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">环穿车/RGV: </label>
+        <el-select v-model="rgv" style="width:240px;">
+          <el-option
+            v-for="item in rgvList"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-移动: </label>
+        <el-button @click="handleMoveForward()">
+          逆时针/前进
+        </el-button>
+        <el-button @click="handleMoveBack()">
+          顺时针/后退
+        </el-button>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-货物: </label>
+        <el-button @click="onLoadForRGV()">
+          加载货物
+        </el-button>
+        <el-button @click="onUnloadForRGV()">
+          卸载货物
+        </el-button>
+        <el-button @click="onUnloadToConveyorForRGV()">
+          卸载货物到传送带
+        </el-button>
+      </div>
+      <el-divider />
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">多穿车/AGV: </label>
+        <el-select v-model="agv" style="width:240px;">
+          <el-option
+            v-for="item in agvList"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-移动: </label>
+        <el-button @click="onMoveRight()">
+          X正向/右
+        </el-button>
+        <el-button @click="onMoveLeft()">
+          X负向/左
+        </el-button>
+        <el-button @click="onMoveFront()">
+          Y正向/前
+        </el-button>
+        <el-button @click="onMoveBehind()">
+          Y负向/后
+        </el-button>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-货物: </label>
+        <el-button @click="onLoadForAGV()">
+          加载货物
+        </el-button>
+        <el-button @click="onUnloadForAGV()">
+          卸载货物
+        </el-button>
+      </div>
+      <el-divider />
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">多穿车/AGV: </label>
+        <el-select v-model="elevator" style="width:240px;">
+          <el-option
+            v-for="item in elevatorList"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-移动: </label>
+        <el-button @click="onElevatorUp()">
+          上升
+        </el-button>
+        <el-button @click="onElevatorDown()">
+          下降
+        </el-button>
+      </div>
+      <div style="display:inline-block; margin: 5px 5px">
+        <label class="radio-label">操作-货物: </label>
+        <el-button @click="onLoadForElevator()">
+          加载货物
+        </el-button>
+        <el-button @click="onUnloadForElevator()">
+          卸载货物
+        </el-button>
+      </div>
+
+    </el-drawer>
+    <el-drawer
+      title="创建任务"
+      :visible.sync="drawer2"
       :direction="direction"
     >
       <span>我来啦!</span>
@@ -59,8 +165,15 @@ export default {
   data() {
     return {
       currentRole: 'adminDashboard',
+      rgvList: ['RGV1'],
+      rgv: undefined,
+      agvList: ['Vehicle001', 'Vehicle002'],
+      agv: undefined,
+      elevatorList: ['Elevator2'],
+      elevator: undefined,
       // 抽屉
-      drawer: false,
+      drawer1: false,
+      drawer2: false,
       direction: 'ltr',
       // agv
       agvState: {
@@ -82,6 +195,75 @@ export default {
     this.$nextTick(this.init)
   },
   methods: {
+    onMoveFront() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onMoveFront(vehicleByName, this.agv)
+    },
+    onMoveBehind() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onMoveBehind(vehicleByName, this.agv)
+    },
+    onMoveLeft() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onMoveLeft(vehicleByName, this.agv)
+    },
+    onMoveRight() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onMoveRight(vehicleByName, this.agv)
+    },
+    onUnloadForAGV() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onUnloadForAGV(vehicleByName, this.agv)
+    },
+    onLoadForAGV() {
+      const vehicleByName = window.getVehicleByName(this.agv)
+      window.onLoadForAGV(vehicleByName, this.agv)
+    },
+    onUnloadForElevator() {
+      window.onUnloadForElevator()
+    },
+    onLoadForElevator() {
+      window.onLoadForElevator()
+    },
+    onElevatorUp() {
+      window.onElevatorUp()
+    },
+    onElevatorDown() {
+      window.onElevatorDown()
+    },
+    onUnloadToConveyorForRGV() {
+      window.onUnloadToConveyorForRGV()
+    },
+    onLoadForRGV() {
+      window.onLoadForRGV()
+    },
+    onUnloadForRGV() {
+      window.onUnloadForRGV()
+    },
+    handleMoveForward() {
+      window.onMoveForward()
+    },
+    handleMoveBack() {
+      window.onMoveBack()
+    },
+    // 工具
+    handleSimControl() {
+      this.drawer1 = true
+    },
+    handleCreateOrder() {
+      this.drawer2 = true
+    },
+    refresh() {
+      this.$router.go(0)
+    },
+    // 抽屉
+    // handleClose(done) {
+    //   this.$confirm('确认关闭？')
+    //     .then(_ => {
+    //       done()
+    //     })
+    //     .catch(_ => {})
+    // },
     periodFetchData() {
       const this_ = this
       setInterval(function() {
@@ -125,24 +307,6 @@ export default {
         window.move(vehicleMesh, name, curPos, nextPos)
       }
     },
-    // 工具
-    handleSimControl() {
-
-    },
-    handleCreateOrder() {
-
-    },
-    refresh() {
-      this.$router.go(0)
-    },
-    // 抽屉
-    // handleClose(done) {
-    //   this.$confirm('确认关闭？')
-    //     .then(_ => {
-    //       done()
-    //     })
-    //     .catch(_ => {})
-    // },
     init() {
       // 变量
       const debug = false
@@ -794,14 +958,17 @@ export default {
       }
 
       // AGV
-      // let AGVLoaded = false
+      const agvLoadstate = {
+        'Vehicle001': false,
+        'Vehicle002': false
+      }
       window.onMoveFront = function onMoveFront(agv, name) {
         const pos = agvPos[name]
         let rank = pos.rank
         const column = pos.column
         const layer = pos.layer
         rank = rank - 1 < 1 ? 1 : rank - 1
-        moveAGVAndBin(agv, column, layer, rank)
+        moveAGVAndBin(agv, name, column, layer, rank)
       }
 
       window.onMoveBehind = function onMoveBehind(agv, name) {
@@ -810,7 +977,7 @@ export default {
         const column = pos.column
         const layer = pos.layer
         rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1
-        moveAGVAndBin(agv, column, layer, rank)
+        moveAGVAndBin(agv, name, column, layer, rank)
       }
 
       window.onMoveLeft = function onMoveLeft(agv, name) {
@@ -819,7 +986,7 @@ export default {
         let column = pos.column
         const layer = pos.layer
         column = column + 1 > rackNumber ? rackNumber : column + 1
-        moveAGVAndBin(agv, column, layer, rank)
+        moveAGVAndBin(agv, name, column, layer, rank)
       }
 
       window.onMoveRight = function onMoveRight(agv, name) {
@@ -828,16 +995,16 @@ export default {
         let column = pos.column
         const layer = pos.layer
         column = column - 1 < 1 ? 1 : column - 1
-        moveAGVAndBin(agv, column, layer, rank)
+        moveAGVAndBin(agv, name, column, layer, rank)
       }
 
-      window.onLoadForAGV = function onLoadForAGV() {
-        window.updateObjPosition(testBinMesh, testShuttle.position.x, testShuttle.position.y + shuttleH / 2 + binD / 2, testShuttle.position.z, null)
-        // AGVLoaded = true
+      window.onLoadForAGV = function onLoadForAGV(agv, name) {
+        window.updateObjPosition(testBinMesh, agv.position.x, agv.position.y + shuttleH / 2 + binD / 2, agv.position.z, null)
+        agvLoadstate[name] = true
       }
 
-      window.onUnloadForAGV = function onUnloadForAGV() {
-        // AGVLoaded = false
+      window.onUnloadForAGV = function onUnloadForAGV(agv, name) {
+        agvLoadstate[name] = false
       }
 
       // 执行RouteStep
@@ -975,20 +1142,21 @@ export default {
         return layer
       }
 
-      function moveAGVAndBin(agv, column, layer, rank) {
+      function moveAGVAndBin(agv, name, column, layer, rank) {
         new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
-        // if (AGVLoaded) {
-        //   new TWEEN.Tween(agv.position).to(getBinPosition(column, layer, rank), 2000).start()
-        // }
+        if (agvLoadstate[name]) {
+          new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
+        }
+        updateAGVPosition(agv, name, column, layer, rank)
       }
 
       window.getAGVPosition = function getAGVPosition(column, layer, rank) {
         return getPositionOfShuttle(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
       }
 
-      // function getBinPosition(column, layer, rank) {
-      //   return getPositionOfBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
-      // }
+      function getBinPosition(column, layer, rank) {
+        return getPositionOfBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
+      }
     }
   }
 }
