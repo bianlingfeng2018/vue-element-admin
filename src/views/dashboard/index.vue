@@ -61,7 +61,13 @@ export default {
       currentRole: 'adminDashboard',
       // 抽屉
       drawer: false,
-      direction: 'ltr'
+      direction: 'ltr',
+      // agv
+      agvState: {
+        'Vehicle001': {},
+        'Vehicle002': {}
+      }
+
     }
   },
   computed: {
@@ -84,10 +90,25 @@ export default {
             console.log(res)
             for (const vehicleState of res) {
               const name = vehicleState.name
-              const triple = vehicleState.currentPrecisePosition
-              if (triple != null) {
-                this_.updateVehiclePosition(name, triple)
+              const cur = vehicleState.currentPrecisePosition
+              const next = vehicleState.nextPrecisePosition
+
+              console.log(next)
+              if (cur == null) {
+                console.log('位置为空，不更新')
+                continue
               }
+
+              // 判断是否改变位置，若是则立即更新位置，且打断模拟动作；若不是则不做处理
+              const state = this_.agvState[name]
+              if (state != null && state.x === cur.x && state.y === cur.y && state.z === cur.z) {
+                console.log('位置没变，不更新')
+                continue
+              }
+
+              this_.agvState[name] = cur
+
+              this_.updateVehiclePosition(name, cur, next)
             }
           })
           .catch(reason => {
@@ -95,26 +116,13 @@ export default {
           })
       }, 1000)
     },
-    updateVehiclePosition(name, pos) {
-      console.log('更新 ' + name + '位置 ' + pos.x + ',' + pos.y + ',' + pos.z)
+    updateVehiclePosition(name, curPos, nextPos) {
+      console.log('更新 ' + name + ', ' +
+        curPos.x + ',' + curPos.y + ',' + curPos.z)
       const vehicleMesh = window.getVehicleByName(name)
-      console.log('vehicle = ' + vehicleMesh)
-      const srcX = Number(pos.x)
-      const srcY = Number(pos.y)
-      const srcZ = Number(pos.z)
-      // 重置位置相关参数
-      const c = srcX + 1
-      const l = srcZ + 1
-      const r = srcY + 1
-      const { x, y, z } = window.getAGVPosition(c, l, r)
-      this.updateObjPosition(vehicleMesh, x, y, z)
-    },
-    updateObjPosition(obj, x, y, z, q) {
-      obj.position.x = x
-      obj.position.y = y
-      obj.position.z = z
-      if (q != null) {
-        obj.quaternion.copy(q)
+      window.setAGVCoord(vehicleMesh, name, curPos)
+      if (nextPos != null) {
+        window.move(vehicleMesh, name, curPos, nextPos)
       }
     },
     // 工具
@@ -357,12 +365,23 @@ export default {
       scene.add(curvePathLine)
 
       // 穿梭车
-      const initColumn = 1; const initLayer = 1; const initRank = 1
+      const agvPos = {
+        'Vehicle001': {
+          column: 1,
+          layer: 1,
+          rank: 1
+        },
+        'Vehicle002': {
+          column: 1,
+          layer: 2,
+          rank: 1
+        }
+      }
       const shuttleW = 40
       const shuttleH = 5
       const shuttleD = 40
-      const shuttle001 = addShuttle(1, 2, 1, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
-      const testShuttle = addShuttle(initColumn, initLayer, initRank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
+      const shuttle001 = addShuttle(agvPos['Vehicle001'].column, agvPos['Vehicle001'].layer, agvPos['Vehicle001'].rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
+      const testShuttle = addShuttle(agvPos['Vehicle002'].column, agvPos['Vehicle002'].layer, agvPos['Vehicle002'].rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
 
       window.getVehicleByName = function getVehicleByName(name) {
         if (name === 'Vehicle001') {
@@ -399,11 +418,20 @@ export default {
       scene.add(binMeshOutput2)
 
       // 测试货物
+
+      window.updateObjPosition = function updateObjPosition(obj, x, y, z, q) {
+        obj.position.x = x
+        obj.position.y = y
+        obj.position.z = z
+        if (q != null) {
+          obj.quaternion.copy(q)
+        }
+      }
       const testBinX = inputBinX
       const testBinY = inputBinY1
       const testBinZ = inputBinZ1
       const testBinMesh = getBin(THREE, 0, 0, 0, binD, binD, binD, binTx)
-      this.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ)
+      window.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ)
       const testBinInitQuaternion = testBinMesh.quaternion.clone()
       scene.add(testBinMesh)
 
@@ -533,15 +561,6 @@ export default {
         controls.update()
       }
 
-      // window.updateObjPosition = function updateObjPosition(obj, x, y, z, q) {
-      //   obj.position.x = x
-      //   obj.position.y = y
-      //   obj.position.z = z
-      //   if (q != null) {
-      //     obj.quaternion.copy(q)
-      //   }
-      // }
-
       function updateCurvePathPosition(obj, curvePath, fraction, axis, up, yOffset) {
         if (fraction > 1) fraction = 0
         const newPosition = curvePath.getPoint(fraction)
@@ -620,7 +639,7 @@ export default {
       let RGVLoaded = false
       let ElevatorLoaded = false
       let ElevatorLoadedShutter = false
-      let ElevatorLoadedBin = false
+      const ElevatorLoadedBin = false
       let ElevatorRunning = false
       window.onMoveForward = function onMoveForward() {
         if (RGVRunning) {
@@ -663,14 +682,14 @@ export default {
       window.onLoadForRGV = function onLoadForRGV() {
         if (!RGVRunning) {
           console.log(RGV.quaternion)
-          this.updateObjPosition(testBinMesh, RGV.position.x, testBinY + baseHeight, RGV.position.z, RGV.quaternion)
+          window.updateObjPosition(testBinMesh, RGV.position.x, testBinY + baseHeight, RGV.position.z, RGV.quaternion)
         }
         RGVLoaded = true
       }
 
       window.onUnloadForRGV = function onUnloadForRGV() {
         RGVLoaded = false
-        this.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ, testBinInitQuaternion)
+        window.updateObjPosition(testBinMesh, testBinX, testBinY, testBinZ, testBinInitQuaternion)
       }
 
       window.onUnloadToConveyorForRGV = function onUnloadToConveyorForRGV() {
@@ -680,7 +699,7 @@ export default {
           y: conveyorY + boardHeight / 2 + binD / 2,
           z: conveyorZ2
         }
-        this.updateObjPosition(testBinMesh, pos.x, pos.y, pos.z, testBinInitQuaternion)
+        window.updateObjPosition(testBinMesh, pos.x, pos.y, pos.z, testBinInitQuaternion)
         const t1 = new TWEEN.Tween(pos)
           .to({
             x: elevatorX + elevatorWidth / 2 + binD / 2,
@@ -712,7 +731,7 @@ export default {
 
       // 提升机加载货物、卸载货物
       window.onLoadForElevator = function onLoadForElevator() {
-        this.updateObjPosition(testBinMesh, elevatorMesh2.position.x, elevatorMesh2.position.y + boardHeight / 2 + binD / 2,
+        window.updateObjPosition(testBinMesh, elevatorMesh2.position.x, elevatorMesh2.position.y + boardHeight / 2 + binD / 2,
           elevatorMesh2.position.z, elevatorMesh2.quaternion)
         ElevatorLoaded = true
       }
@@ -775,59 +794,73 @@ export default {
       }
 
       // AGV
-      let AGVLoaded = false
-      let column = initColumn
-      let layer = initLayer
-      let rank = initRank
-      window.onMoveFront = function onMoveFront() {
+      // let AGVLoaded = false
+      window.onMoveFront = function onMoveFront(agv, name) {
+        const pos = agvPos[name]
+        let rank = pos.rank
+        const column = pos.column
+        const layer = pos.layer
         rank = rank - 1 < 1 ? 1 : rank - 1
-        moveAGVAndBin(column, layer, rank)
+        moveAGVAndBin(agv, column, layer, rank)
       }
 
-      window.onMoveBehind = function onMoveBehind() {
+      window.onMoveBehind = function onMoveBehind(agv, name) {
+        const pos = agvPos[name]
+        let rank = pos.rank
+        const column = pos.column
+        const layer = pos.layer
         rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1
-        moveAGVAndBin(column, layer, rank)
+        moveAGVAndBin(agv, column, layer, rank)
       }
 
-      window.onMoveLeft = function onMoveLeft() {
+      window.onMoveLeft = function onMoveLeft(agv, name) {
+        const pos = agvPos[name]
+        const rank = pos.rank
+        let column = pos.column
+        const layer = pos.layer
         column = column + 1 > rackNumber ? rackNumber : column + 1
-        moveAGVAndBin(column, layer, rank)
+        moveAGVAndBin(agv, column, layer, rank)
       }
 
-      window.onMoveRight = function onMoveRight() {
+      window.onMoveRight = function onMoveRight(agv, name) {
+        const pos = agvPos[name]
+        const rank = pos.rank
+        let column = pos.column
+        const layer = pos.layer
         column = column - 1 < 1 ? 1 : column - 1
-        moveAGVAndBin(column, layer, rank)
+        moveAGVAndBin(agv, column, layer, rank)
       }
 
       window.onLoadForAGV = function onLoadForAGV() {
-        this.updateObjPosition(testBinMesh, testShuttle.position.x, testShuttle.position.y + shuttleH / 2 + binD / 2, testShuttle.position.z, null)
-        AGVLoaded = true
+        window.updateObjPosition(testBinMesh, testShuttle.position.x, testShuttle.position.y + shuttleH / 2 + binD / 2, testShuttle.position.z, null)
+        // AGVLoaded = true
       }
 
       window.onUnloadForAGV = function onUnloadForAGV() {
-        AGVLoaded = false
+        // AGVLoaded = false
       }
 
       // 执行RouteStep
-      function updateAGVPosition(c, l, r) {
-        column = c
-        layer = l
-        rank = r
+      function updateAGVPosition(agv, name, c, l, r) {
+        const pos = agvPos[name]
+        pos.rank = r
+        pos.column = c
+        pos.layer = l
       }
-      window.unloadAGVAndBin = function() {
+      window.unloadAGVAndBin = function(agv) {
         ElevatorLoadedShutter = false
-        ElevatorLoadedBin = false
+        // ElevatorLoadedBin = false
       }
-      window.setAGVOnElevator = function() {
+      window.setAGVOnElevator = function(agv) {
         const { x, y, z } = elevatorMesh2.position
-        this.updateObjPosition(testShuttle, x, y + boardHeight / 2, z)
+        window.updateObjPosition(agv, x, y + boardHeight / 2, z)
         ElevatorLoadedShutter = true
-        if (AGVLoaded) {
-          this.updateObjPosition(testBinMesh, x, y + boardHeight / 2 + shuttleH + binD / 2, z)
-          ElevatorLoadedBin = true
-        }
+        // if (AGVLoaded) {
+        //   window.updateObjPosition(testBinMesh, x, y + boardHeight / 2 + shuttleH + binD / 2, z)
+        //   ElevatorLoadedBin = true
+        // }
       }
-      window.setAGVCoord = function(pos) {
+      window.setAGVCoord = function(agv, name, pos) {
         console.log(pos)
         const srcX = Number(pos.x)
         const srcY = Number(pos.y)
@@ -836,30 +869,28 @@ export default {
         const c = srcX + 1
         const l = srcZ + 1
         const r = srcY + 1
-        updateAGVPosition(c, l, r)
+        updateAGVPosition(agv, name, c, l, r)
         const { x, y, z } = window.getAGVPosition(c, l, r)
-        this.updateObjPosition(testShuttle, x, y, z)
+        window.updateObjPosition(agv, x, y, z)
 
-        if (AGVLoaded) {
-          // setBinCoord(pos)
-        }
+        // if (AGVLoaded) {
+        //   setBinCoord(pos)
+        // }
       }
-      window.setBinCoord = function(pos) {
-        console.log(pos)
-        const srcX = Number(pos.x)
-        const srcY = Number(pos.y)
-        const srcZ = Number(pos.z)
-        // 重置位置相关参数
-        const c = srcX + 1
-        const l = srcZ + 1
-        const r = srcY + 1
-        updateAGVPosition(c, l, r)
-        const { x, y, z } = window.getAGVPosition(c, l, r)
-        this.updateObjPosition(testBinMesh, x, y + shuttleH / 2 + binD / 2, z)
-      }
-      window.move = function move(src, dest) {
-        console.log(src)
-        console.log(dest)
+      // window.setBinCoord = function(pos) {
+      //   console.log(pos)
+      //   const srcX = Number(pos.x)
+      //   const srcY = Number(pos.y)
+      //   const srcZ = Number(pos.z)
+      //   // 重置位置相关参数
+      //   const c = srcX + 1
+      //   const l = srcZ + 1
+      //   const r = srcY + 1
+      //   updateAGVPosition(c, l, r)
+      //   const { x, y, z } = window.getAGVPosition(c, l, r)
+      //   window.updateObjPosition(testBinMesh, x, y + shuttleH / 2 + binD / 2, z)
+      // }
+      window.move = function move(agv, name, src, dest) {
         const srcX = Number(src.x)
         const srcY = Number(src.y)
         const srcZ = Number(src.z)
@@ -868,23 +899,58 @@ export default {
         const destZ = Number(dest.z)
         if (srcX === destX && srcY !== destY && srcZ === destZ) {
           if (srcY - destY === 1) {
-            // onMoveFront()
+            window.onMoveFront(agv, name)
           } else if (srcY - destY === -1) {
-            // onMoveBehind()
+            window.onMoveBehind(agv, name)
           }
         } else if (srcX !== destX && srcY === destY && srcZ === destZ) {
           if (srcX - destX === 1) {
-            // onMoveRight()
+            window.onMoveRight(agv, name)
           } else if (srcX - destX === -1) {
-            // onMoveLeft()
+            window.onMoveLeft(agv, name)
           }
         } else if (srcX === destX && srcY === destY && srcZ !== destZ) {
-          if (srcZ - destZ === 1) {
-            // elevator move to same layer and agv move to elevator, elevator move DOWN
-            // with agv and bin, agv move to destZ
-          } else if (srcZ - destZ === -1) {
-            // elevator move to same layer and agv move to elevator, elevator move UP
-            // with agv and bin, agv move to destZ
+          // if (srcZ - destZ === 1) {
+          //   // elevator move to same layer and agv move to elevator, elevator move DOWN
+          //   // with agv and bin, agv move to destZ
+          // } else if (srcZ - destZ === -1) {
+          //   // elevator move to same layer and agv move to elevator, elevator move UP
+          //   // with agv and bin, agv move to destZ
+          // }
+          // 有上下移动
+          console.log('上下移动')
+
+          // 1.移动elevator到起点所在层
+          window.moveElevatorTo(src)
+
+          // 2.移动agv到elevator上
+          window.setAGVOnElevator(agv)
+
+          // 3.移动elevator到终点所在层
+          window.moveElevatorTo(dest)
+
+          // 4.将agv和bin从elevator上卸载
+          window.unloadAGVAndBin(agv)
+
+          // 5.移动agv到终点
+          window.setAGVCoord(agv, name, dest)
+          // window.setBinCoord(dest)
+        }
+      }
+      window.moveElevatorTo = function moveElevatorTo(pos) {
+        const layer = Number(window.getElevatorLayer)
+        console.log('layer = ' + layer)
+        const curLayer = pos.z
+        let diff = curLayer - layer
+        if (diff > 0) {
+          // down
+          while (diff-- > 0) {
+            window.onElevatorUp()
+          }
+        } else if (diff < 0) {
+          // up
+          while (diff++ < 0) {
+            window.onElevatorDown()
           }
         }
       }
@@ -909,20 +975,20 @@ export default {
         return layer
       }
 
-      function moveAGVAndBin(column, layer, rank) {
-        new TWEEN.Tween(testShuttle.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
-        if (AGVLoaded) {
-          new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
-        }
+      function moveAGVAndBin(agv, column, layer, rank) {
+        new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
+        // if (AGVLoaded) {
+        //   new TWEEN.Tween(agv.position).to(getBinPosition(column, layer, rank), 2000).start()
+        // }
       }
 
       window.getAGVPosition = function getAGVPosition(column, layer, rank) {
         return getPositionOfShuttle(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
       }
 
-      function getBinPosition(column, layer, rank) {
-        return getPositionOfBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
-      }
+      // function getBinPosition(column, layer, rank) {
+      //   return getPositionOfBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH)
+      // }
     }
   }
 }
