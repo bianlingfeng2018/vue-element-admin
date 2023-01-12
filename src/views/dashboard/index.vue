@@ -12,7 +12,7 @@
         <el-button type="default" icon="el-icon-edit" @click="handleSimControl()">仿真控制</el-button>
         <!--        <el-button type="default" icon="el-icon-share" @click="handleCreateOrder()">创建任务</el-button>-->
         <el-button type="default" icon="el-icon-refresh" @click="refresh()">刷新</el-button>
-        <el-button type="default" icon="el-icon-eye" @click="showText()">显示/隐藏坐标</el-button>
+        <!--        <el-button type="default" icon="el-icon-eye" @click="showText()">显示/隐藏坐标</el-button>-->
       </el-button-group>
     </el-card>
 
@@ -196,7 +196,7 @@ export default {
     ])
   },
   created() {
-    // this.periodFetchData()
+    this.periodFetchData()
     // this.loadModel()
   },
   mounted() {
