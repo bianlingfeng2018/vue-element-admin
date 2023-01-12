@@ -162,3 +162,18 @@ export function getShuttle(THREE, x, y, z, w, h, d, c) {
   mesh.position.set(x, y, z)
   return mesh
 }
+export function getPointText(THREE, textGeo, font, size, height, x, y, z, color) {
+  const materials = new THREE.MeshStandardMaterial({
+    color: color,
+    transparent: true,
+    opacity: 0.6
+  })
+
+  textGeo.computeBoundingBox()
+
+  const mesh = new THREE.Mesh(textGeo, materials)
+  mesh.position.set(x, y, z)
+  mesh.rotation.x = -Math.PI / 2.0
+  // mesh.rotation.y = 0
+  return mesh
+}

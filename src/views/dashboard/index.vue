@@ -12,6 +12,7 @@
         <el-button type="default" icon="el-icon-edit" @click="handleSimControl()">仿真控制</el-button>
         <!--        <el-button type="default" icon="el-icon-share" @click="handleCreateOrder()">创建任务</el-button>-->
         <el-button type="default" icon="el-icon-refresh" @click="refresh()">刷新</el-button>
+        <el-button type="default" icon="el-icon-eye" @click="showText()">显示/隐藏坐标</el-button>
       </el-button-group>
     </el-card>
 
@@ -91,7 +92,7 @@
       </div>
       <el-divider />
       <div style="display:inline-block; margin: 5px 5px">
-        <label class="radio-label">多穿车/AGV: </label>
+        <label class="radio-label">提升机: </label>
         <el-select v-model="elevator" style="width:240px;">
           <el-option
             v-for="item in elevatorList"
@@ -137,8 +138,10 @@ import { mapGetters } from 'vuex'
 // import editorDashboard from './editor'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+// import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js'
+// import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import {
   getAmbientLight,
   getBase,
@@ -158,6 +161,7 @@ import {
   getStick
 } from '@/views/dashboard/js/Common'
 import { queryVehiclesState } from '@/api/asrs-sync'
+import { queryPointList } from '@/api/asrs-model'
 
 export default {
   name: 'Dashboard',
@@ -179,8 +183,11 @@ export default {
       agvState: {
         'Vehicle001': {},
         'Vehicle002': {}
-      }
-
+      },
+      // text
+      textArr: [],
+      textVisible: true
+      // pointMap: {}
     }
   },
   computed: {
@@ -189,12 +196,30 @@ export default {
     ])
   },
   created() {
-    this.periodFetchData()
+    // this.periodFetchData()
+    // this.loadModel()
   },
   mounted() {
     this.$nextTick(this.init)
   },
   methods: {
+    loadModel() {
+      // const this_ = this
+      queryPointList()
+        .then(res => {
+          // this_.pointMap = res
+          console.log(res)
+        })
+        .catch(reason => {
+          console.log(reason)
+        })
+    },
+    showText() {
+      this.textArr.forEach(mesh => {
+        mesh.visible = !this.textVisible
+      })
+      this.textVisible = !this.textVisible
+    },
     onMoveFront() {
       const vehicleByName = window.getVehicleByName(this.agv)
       window.onMoveFront(vehicleByName, this.agv)
@@ -759,6 +784,70 @@ export default {
         return shuttleMesh
       }
 
+      // let font
+      // const fontName = 'optimer' // helvetiker, optimer, gentilis, droid sans, droid serif
+      // const fontWeight = 'bold' // normal bold
+      // const fontLoader = new FontLoader()
+      // const size = 5
+      // const height = 0.1
+      // fontLoader.load('fonts/' + fontName + '_' + fontWeight + '.typeface.json', function(response) {
+      //   font = response
+      //
+      //   // createText()
+      // })
+      // function createText() {
+      //   for (let i = 0; i < 5; i++) {
+      //     for (let j = 0; j < 4; j++) {
+      //       for (let k = 0; k < 5; k++) {
+      //         const textGeo = new TextGeometry('(' + i + ',' + k + ',' + j + ')', {
+      //           font: font,
+      //           size: size,
+      //           height: height
+      //           // curveSegments: curveSegments,
+      //           // bevelThickness: bevelThickness,
+      //           // bevelSize: bevelSize,
+      //           // bevelEnabled: bevelEnabled
+      //         })
+      //         addPointText(textGeo, (i + 1), (j + 1), (k + 1), rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, 'rgb(254,251,231)')
+      //         // mesh.visible = true
+      //         // this_.textArr.push(mesh)
+      //       }
+      //     }
+      //   }
+      //   // for (const coordKey in map) {
+      //   //   const split = coordKey.split(',')
+      //   //   const srcX = Number(split[0])
+      //   //   const srcY = Number(split[1])
+      //   //   const srcZ = Number(split[2])
+      //   //   // 重置位置相关参数
+      //   //   const c = srcX + 1
+      //   //   const l = srcZ + 1
+      //   //   const r = srcY + 1
+      //   //   const pointNameValue = map[coordKey] + ''
+      //   //   console.log(pointNameValue)
+      //   //   console.log(c, l, r)
+      //   //   const textGeo = new TextGeometry(pointNameValue, {
+      //   //     font: font,
+      //   //     size: size,
+      //   //     height: height
+      //   //     // curveSegments: curveSegments,
+      //   //     // bevelThickness: bevelThickness,
+      //   //     // bevelSize: bevelSize,
+      //   //     // bevelEnabled: bevelEnabled
+      //   //   })
+      //   //   const mesh = addPointText(textGeo, c, l, r, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, 'rgb(254,251,231)')
+      //   //   mesh.visible = true
+      //   //   this_.textArr.push(mesh)
+      //   // }
+      // }
+      // function addPointText(textGeo, column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, color) {
+      //   const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + 10
+      //   const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + boardHeight / 2 - height / 2
+      //   const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval - 10
+      //   const pointText = getPointText(THREE, textGeo, font, size, height, initX, initY, initZ, color)
+      //   scene.add(pointText)
+      //   return pointText
+      // }
       // function addBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH) {
       //   const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + rackWidth / 2
       //   const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + binD / 2 + shuttleH
