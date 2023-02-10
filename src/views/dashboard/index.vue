@@ -139,7 +139,7 @@ import { mapGetters } from 'vuex'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 // import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+// import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js'
 // import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import {
@@ -155,7 +155,7 @@ import {
   getHouse,
   getRack,
   getRackGroup,
-  getRenderer,
+  getRenderer, getRGV,
   getScene,
   getShuttle,
   getStick
@@ -720,22 +720,32 @@ export default {
       animate()
 
       // load model
-      const loader = new GLTFLoader()
-      let RGV
+      // const loader = new GLTFLoader()
+      // let RGV
+      // const initF = 0.75
+      // loader.load('/static/models/agv/scene.gltf', function(gltf) {
+      //   RGV = gltf.scene
+      //   RGV.scale.set(0.05, 0.05, 0.05)
+      //   RGV.position.set(100, 0, 0)
+      //   scene.add(RGV)
+      //
+      //   modelLoaded = true
+      //
+      //   // 初始化RGV在环轨上的位置及方向
+      //   updateCurvePathPosition(RGV, curvePath, initF, axis, upRGV, 0)
+      // }, undefined, function(error) {
+      //   console.error(error)
+      // })
+
       const initF = 0.75
-      loader.load('/static/models/agv/scene.gltf', function(gltf) {
-        RGV = gltf.scene
-        RGV.scale.set(0.05, 0.05, 0.05)
-        RGV.position.set(100, 0, 0)
-        scene.add(RGV)
+      const yOffset = 5
+      const RGV = getRGV(THREE, 100, 0, 0, 40, 10, 20, binTx)
+      scene.add(RGV)
 
-        modelLoaded = true
+      modelLoaded = true
 
-        // 初始化RGV在环轨上的位置及方向
-        updateCurvePathPosition(RGV, curvePath, initF, axis, upRGV, 0)
-      }, undefined, function(error) {
-        console.error(error)
-      })
+      // 初始化RGV在环轨上的位置及方向
+      updateCurvePathPosition(RGV, curvePath, initF, axis, upRGV, yOffset)
 
       // axes
       const axesHelper = new THREE.AxesHelper(1000)
@@ -751,7 +761,7 @@ export default {
             fraction += 0.001
             // if (fraction > 1) fraction = 0;
             if (fraction < 0.3) {
-              updateCurvePathPosition(RGV, curvePath, fraction, axis, upRGV, 0)
+              updateCurvePathPosition(RGV, curvePath, fraction, axis, upRGV, yOffset)
               updateCurvePathPosition(testBinMesh, curvePath, fraction, axis, upTestBin, testBinY + baseHeight)
             } else {
               canMoveByCircle = false
@@ -923,7 +933,7 @@ export default {
             if (curF >= 1.0) {
               curF = 0.0
             }
-            updateCurvePathPosition(RGV, curvePath, curF, axis, upRGV, 0)
+            updateCurvePathPosition(RGV, curvePath, curF, axis, upRGV, yOffset)
             if (RGVLoaded) {
               updateCurvePathPosition(testBinMesh, curvePath, curF, axis, upTestBin, testBinY + baseHeight)
             }
@@ -942,7 +952,7 @@ export default {
             if (curF <= 0.0) {
               curF = 1.0
             }
-            updateCurvePathPosition(RGV, curvePath, curF, axis, upRGV, 0)
+            updateCurvePathPosition(RGV, curvePath, curF, axis, upRGV, yOffset)
             if (RGVLoaded) {
               updateCurvePathPosition(testBinMesh, curvePath, curF, axis, upTestBin, testBinY + baseHeight)
             }

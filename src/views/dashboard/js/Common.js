@@ -162,6 +162,17 @@ export function getShuttle(THREE, x, y, z, w, h, d, c) {
   mesh.position.set(x, y, z)
   return mesh
 }
+export function getRGV(THREE, x, y, z, w, h, d, c) {
+  const geometry = new THREE.BoxGeometry(w, h, d, 1, 1, 1)
+  const material = new THREE.MeshPhongMaterial({
+    color: c,
+    emissive: 0x000000,
+    side: THREE.DoubleSide
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(x, y, z)
+  return mesh
+}
 export function getPointText(THREE, textGeo, font, size, height, x, y, z, color) {
   const materials = new THREE.MeshStandardMaterial({
     color: color,
