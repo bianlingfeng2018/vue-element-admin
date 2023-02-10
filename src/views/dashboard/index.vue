@@ -162,6 +162,7 @@ import {
 } from '@/views/dashboard/js/Common'
 import { queryVehiclesState } from '@/api/asrs-sync'
 import { queryPointList } from '@/api/asrs-model'
+import { move } from '@/views/dashboard/js/CommonMove'
 
 export default {
   name: 'Dashboard',
@@ -187,6 +188,11 @@ export default {
             y: 0,
             z: 0
           },
+          modelPos: {
+            column: 1,
+            layer: 2,
+            rank: 1
+          },
           tween: undefined
         },
         'Vehicle002': {
@@ -194,6 +200,11 @@ export default {
             x: 0,
             y: 0,
             z: 0
+          },
+          modelPos: {
+            column: 1,
+            layer: 1,
+            rank: 1
           },
           tween: undefined
         }
@@ -234,21 +245,37 @@ export default {
       })
       this.textVisible = !this.textVisible
     },
+    getOrCreateTweenByVehicleName(name, startPos) {
+      let t = this.agvState[name].tween
+      if (t == null) {
+        t = new TWEEN.Tween(startPos)
+        this.agvState[name].tween = t
+      }
+      return t
+    },
     onMoveFront() {
-      const vehicleByName = window.getVehicleByName(this.agv)
-      window.onMoveFront(vehicleByName, this.agv)
+      const name = this.agv
+      const vehicleByName = window.getVehicleByName(name)
+      const modelPos = this.agvState[name].modelPos
+      window.onMoveFront(vehicleByName, modelPos, name)
     },
     onMoveBehind() {
-      const vehicleByName = window.getVehicleByName(this.agv)
-      window.onMoveBehind(vehicleByName, this.agv)
+      const name = this.agv
+      const vehicleByName = window.getVehicleByName(name)
+      const modelPos = this.agvState[name].modelPos
+      window.onMoveBehind(vehicleByName, modelPos, name)
     },
     onMoveLeft() {
-      const vehicleByName = window.getVehicleByName(this.agv)
-      window.onMoveLeft(vehicleByName, this.agv)
+      const name = this.agv
+      const vehicleByName = window.getVehicleByName(name)
+      const modelPos = this.agvState[name].modelPos
+      window.onMoveLeft(vehicleByName, modelPos, name)
     },
     onMoveRight() {
-      const vehicleByName = window.getVehicleByName(this.agv)
-      window.onMoveRight(vehicleByName, this.agv)
+      const name = this.agv
+      const vehicleByName = window.getVehicleByName(name)
+      const modelPos = this.agvState[name].modelPos
+      window.onMoveRight(vehicleByName, modelPos, name)
     },
     onUnloadForAGV() {
       const vehicleByName = window.getVehicleByName(this.agv)
@@ -338,6 +365,7 @@ export default {
       }, 1000)
     },
     updateVehiclePosition(name, curPos, nextPos) {
+      // 直接更新位置
       console.log('更新 ' + name + ', ' +
         curPos.x + ',' + curPos.y + ',' + curPos.z)
       const vehicleMesh = window.getVehicleByName(name)
@@ -346,8 +374,11 @@ export default {
         t.stop()
       }
       window.setAGVCoord(vehicleMesh, name, curPos)
+      // 向下一个点提前移动位置
       if (nextPos != null) {
-        window.move(vehicleMesh, name, curPos, nextPos)
+        const t = this.getOrCreateTweenByVehicleName(name, vehicleMesh.position)
+        const modelPos = this.agvState[name].modelPos
+        move(vehicleMesh, name, curPos, nextPos, modelPos, t)
       }
     },
     init() {
@@ -573,23 +604,11 @@ export default {
       scene.add(curvePathLine)
 
       // 穿梭车
-      const agvPos = {
-        'Vehicle001': {
-          column: 1,
-          layer: 1,
-          rank: 1
-        },
-        'Vehicle002': {
-          column: 1,
-          layer: 2,
-          rank: 1
-        }
-      }
       const shuttleW = 40
       const shuttleH = 5
       const shuttleD = 40
-      const shuttle001 = addShuttle(agvPos['Vehicle001'].column, agvPos['Vehicle001'].layer, agvPos['Vehicle001'].rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
-      const testShuttle = addShuttle(agvPos['Vehicle002'].column, agvPos['Vehicle002'].layer, agvPos['Vehicle002'].rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
+      const shuttle001 = addShuttle(this_.agvState['Vehicle001'].modelPos.column, this_.agvState['Vehicle001'].modelPos.layer, this_.agvState['Vehicle001'].modelPos.rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
+      const testShuttle = addShuttle(this_.agvState['Vehicle002'].modelPos.column, this_.agvState['Vehicle002'].modelPos.layer, this_.agvState['Vehicle002'].modelPos.rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
 
       window.getVehicleByName = function getVehicleByName(name) {
         if (name === 'Vehicle001') {
@@ -1080,39 +1099,35 @@ export default {
         'Vehicle001': false,
         'Vehicle002': false
       }
-      window.onMoveFront = function onMoveFront(agv, name) {
-        const pos = agvPos[name]
+      window.onMoveFront = function onMoveFront(agv, pos, name) {
         let rank = pos.rank
         const column = pos.column
         const layer = pos.layer
-        rank = rank - 1 < 1 ? 1 : (rank - 1 / 2) // 因为是预判，所以只移动一半距离，当小车真正到达下一个点时才更新位置
+        rank = rank - 1 < 1 ? 1 : rank - 1
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
-      window.onMoveBehind = function onMoveBehind(agv, name) {
-        const pos = agvPos[name]
+      window.onMoveBehind = function onMoveBehind(agv, pos, name) {
         let rank = pos.rank
         const column = pos.column
         const layer = pos.layer
-        rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1 / 2
+        rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
-      window.onMoveLeft = function onMoveLeft(agv, name) {
-        const pos = agvPos[name]
+      window.onMoveLeft = function onMoveLeft(agv, pos, name) {
         const rank = pos.rank
         let column = pos.column
         const layer = pos.layer
-        column = column + 1 > rackNumber ? rackNumber : column + 1 / 2
+        column = column + 1 > rackNumber ? rackNumber : column + 1
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
-      window.onMoveRight = function onMoveRight(agv, name) {
-        const pos = agvPos[name]
+      window.onMoveRight = function onMoveRight(agv, pos, name) {
         const rank = pos.rank
         let column = pos.column
         const layer = pos.layer
-        column = column - 1 < 1 ? 1 : column - 1 / 2
+        column = column - 1 < 1 ? 1 : column - 1
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
@@ -1127,7 +1142,7 @@ export default {
 
       // 执行RouteStep
       function updateAGVPosition(agv, name, c, l, r) {
-        const pos = agvPos[name]
+        const pos = this_.agvState[name].modelPos
         pos.rank = r
         pos.column = c
         pos.layer = l
@@ -1175,53 +1190,6 @@ export default {
       //   const { x, y, z } = window.getAGVPosition(c, l, r)
       //   window.updateObjPosition(testBinMesh, x, y + shuttleH / 2 + binD / 2, z)
       // }
-      window.move = function move(agv, name, src, dest) {
-        const srcX = Number(src.x)
-        const srcY = Number(src.y)
-        const srcZ = Number(src.z)
-        const destX = Number(dest.x)
-        const destY = Number(dest.y)
-        const destZ = Number(dest.z)
-        if (srcX === destX && srcY !== destY && srcZ === destZ) {
-          if (srcY - destY === 1) {
-            window.onMoveFront(agv, name)
-          } else if (srcY - destY === -1) {
-            window.onMoveBehind(agv, name)
-          }
-        } else if (srcX !== destX && srcY === destY && srcZ === destZ) {
-          if (srcX - destX === 1) {
-            window.onMoveRight(agv, name)
-          } else if (srcX - destX === -1) {
-            window.onMoveLeft(agv, name)
-          }
-        } else if (srcX === destX && srcY === destY && srcZ !== destZ) {
-          // // if (srcZ - destZ === 1) {
-          // //   // elevator move to same layer and agv move to elevator, elevator move DOWN
-          // //   // with agv and bin, agv move to destZ
-          // // } else if (srcZ - destZ === -1) {
-          // //   // elevator move to same layer and agv move to elevator, elevator move UP
-          // //   // with agv and bin, agv move to destZ
-          // // }
-          // // 有上下移动
-          // console.log('上下移动')
-          //
-          // // 1.移动elevator到起点所在层
-          // window.moveElevatorTo(src)
-          //
-          // // 2.移动agv到elevator上
-          // window.setAGVOnElevator(agv)
-          //
-          // // 3.移动elevator到终点所在层
-          // window.moveElevatorTo(dest)
-          //
-          // // 4.将agv和bin从elevator上卸载
-          // window.unloadAGVAndBin(agv)
-          //
-          // // 5.移动agv到终点
-          // window.setAGVCoord(agv, name, dest)
-          // // window.setBinCoord(dest)
-        }
-      }
       window.moveElevatorTo = function moveElevatorTo(pos) {
         const layer = Number(window.getElevatorLayer)
         console.log('layer = ' + layer)
@@ -1260,33 +1228,12 @@ export default {
         return layer
       }
 
-      // function moveAGVAndBin(agv, name, column, layer, rank) {
-      //   new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
-      //   if (agvLoadstate[name]) {
-      //     new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
-      //   }
-      //   updateAGVPosition(agv, name, column, layer, rank)
-      // }
       function moveAGVAndBin(agv, name, column, layer, rank) {
-        let t = this_.agvState[name].tween
-        if (t == null) {
-          t = new TWEEN.Tween(agv.position)
-          this_.agvState[name].tween = t
-        }
-        t.to(window.getAGVPosition(column, layer, rank), 3000)
-          .onComplete(() => {
-            // updateAGVPosition(agv, name, column, layer, rank)
-          })
-          .start()
-        // setTimeout(function() {
-        //   t.stop()
-        //   const { x, y, z } = window.getAGVPosition(column, layer, rank)
-        //   window.updateObjPosition(agv, x, y, z)
-        //   updateAGVPosition(agv, name, column, layer, rank)
-        // }, 2000)
+        new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
         if (agvLoadstate[name]) {
           new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
         }
+        updateAGVPosition(agv, name, column, layer, rank)
       }
 
       window.getAGVPosition = function getAGVPosition(column, layer, rank) {
