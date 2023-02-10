@@ -181,8 +181,22 @@ export default {
       direction: 'ltr',
       // agv
       agvState: {
-        'Vehicle001': {},
-        'Vehicle002': {}
+        'Vehicle001': {
+          pos: {
+            x: 0,
+            y: 0,
+            z: 0
+          },
+          tween: undefined
+        },
+        'Vehicle002': {
+          pos: {
+            x: 0,
+            y: 0,
+            z: 0
+          },
+          tween: undefined
+        }
       },
       // text
       textArr: [],
@@ -307,13 +321,13 @@ export default {
               }
 
               // 判断是否改变位置，若是则立即更新位置，且打断模拟动作；若不是则不做处理
-              const state = this_.agvState[name]
+              const state = this_.agvState[name].pos
               if (state != null && state.x === cur.x && state.y === cur.y && state.z === cur.z) {
                 console.log('位置没变，不更新')
                 continue
               }
 
-              this_.agvState[name] = cur
+              this_.agvState[name].pos = cur
 
               this_.updateVehiclePosition(name, cur, next)
             }
@@ -327,12 +341,17 @@ export default {
       console.log('更新 ' + name + ', ' +
         curPos.x + ',' + curPos.y + ',' + curPos.z)
       const vehicleMesh = window.getVehicleByName(name)
+      const t = this.agvState[name].tween
+      if (t != null) {
+        t.stop()
+      }
       window.setAGVCoord(vehicleMesh, name, curPos)
       if (nextPos != null) {
         window.move(vehicleMesh, name, curPos, nextPos)
       }
     },
     init() {
+      const this_ = this
       // 变量
       const debug = false
       let modelLoaded = false
@@ -1056,7 +1075,7 @@ export default {
         let rank = pos.rank
         const column = pos.column
         const layer = pos.layer
-        rank = rank - 1 < 1 ? 1 : rank - 1
+        rank = rank - 1 < 1 ? 1 : (rank - 1 / 2) // 因为是预判，所以只移动一半距离，当小车真正到达下一个点时才更新位置
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
@@ -1065,7 +1084,7 @@ export default {
         let rank = pos.rank
         const column = pos.column
         const layer = pos.layer
-        rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1
+        rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1 / 2
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
@@ -1074,7 +1093,7 @@ export default {
         const rank = pos.rank
         let column = pos.column
         const layer = pos.layer
-        column = column + 1 > rackNumber ? rackNumber : column + 1
+        column = column + 1 > rackNumber ? rackNumber : column + 1 / 2
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
@@ -1083,7 +1102,7 @@ export default {
         const rank = pos.rank
         let column = pos.column
         const layer = pos.layer
-        column = column - 1 < 1 ? 1 : column - 1
+        column = column - 1 < 1 ? 1 : column - 1 / 2
         moveAGVAndBin(agv, name, column, layer, rank)
       }
 
@@ -1166,31 +1185,31 @@ export default {
             window.onMoveLeft(agv, name)
           }
         } else if (srcX === destX && srcY === destY && srcZ !== destZ) {
-          // if (srcZ - destZ === 1) {
-          //   // elevator move to same layer and agv move to elevator, elevator move DOWN
-          //   // with agv and bin, agv move to destZ
-          // } else if (srcZ - destZ === -1) {
-          //   // elevator move to same layer and agv move to elevator, elevator move UP
-          //   // with agv and bin, agv move to destZ
-          // }
-          // 有上下移动
-          console.log('上下移动')
-
-          // 1.移动elevator到起点所在层
-          window.moveElevatorTo(src)
-
-          // 2.移动agv到elevator上
-          window.setAGVOnElevator(agv)
-
-          // 3.移动elevator到终点所在层
-          window.moveElevatorTo(dest)
-
-          // 4.将agv和bin从elevator上卸载
-          window.unloadAGVAndBin(agv)
-
-          // 5.移动agv到终点
-          window.setAGVCoord(agv, name, dest)
-          // window.setBinCoord(dest)
+          // // if (srcZ - destZ === 1) {
+          // //   // elevator move to same layer and agv move to elevator, elevator move DOWN
+          // //   // with agv and bin, agv move to destZ
+          // // } else if (srcZ - destZ === -1) {
+          // //   // elevator move to same layer and agv move to elevator, elevator move UP
+          // //   // with agv and bin, agv move to destZ
+          // // }
+          // // 有上下移动
+          // console.log('上下移动')
+          //
+          // // 1.移动elevator到起点所在层
+          // window.moveElevatorTo(src)
+          //
+          // // 2.移动agv到elevator上
+          // window.setAGVOnElevator(agv)
+          //
+          // // 3.移动elevator到终点所在层
+          // window.moveElevatorTo(dest)
+          //
+          // // 4.将agv和bin从elevator上卸载
+          // window.unloadAGVAndBin(agv)
+          //
+          // // 5.移动agv到终点
+          // window.setAGVCoord(agv, name, dest)
+          // // window.setBinCoord(dest)
         }
       }
       window.moveElevatorTo = function moveElevatorTo(pos) {
@@ -1231,12 +1250,33 @@ export default {
         return layer
       }
 
+      // function moveAGVAndBin(agv, name, column, layer, rank) {
+      //   new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
+      //   if (agvLoadstate[name]) {
+      //     new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
+      //   }
+      //   updateAGVPosition(agv, name, column, layer, rank)
+      // }
       function moveAGVAndBin(agv, name, column, layer, rank) {
-        new TWEEN.Tween(agv.position).to(window.getAGVPosition(column, layer, rank), 2000).start()
+        let t = this_.agvState[name].tween
+        if (t == null) {
+          t = new TWEEN.Tween(agv.position)
+          this_.agvState[name].tween = t
+        }
+        t.to(window.getAGVPosition(column, layer, rank), 3000)
+          .onComplete(() => {
+            // updateAGVPosition(agv, name, column, layer, rank)
+          })
+          .start()
+        // setTimeout(function() {
+        //   t.stop()
+        //   const { x, y, z } = window.getAGVPosition(column, layer, rank)
+        //   window.updateObjPosition(agv, x, y, z)
+        //   updateAGVPosition(agv, name, column, layer, rank)
+        // }, 2000)
         if (agvLoadstate[name]) {
           new TWEEN.Tween(testBinMesh.position).to(getBinPosition(column, layer, rank), 2000).start()
         }
-        updateAGVPosition(agv, name, column, layer, rank)
       }
 
       window.getAGVPosition = function getAGVPosition(column, layer, rank) {
