@@ -12,7 +12,7 @@
         <el-button type="default" icon="el-icon-edit" @click="handleSimControl()">仿真控制</el-button>
         <!--        <el-button type="default" icon="el-icon-share" @click="handleCreateOrder()">创建任务</el-button>-->
         <el-button type="default" icon="el-icon-refresh" @click="refresh()">刷新</el-button>
-        <!--        <el-button type="default" icon="el-icon-eye" @click="showText()">显示/隐藏坐标</el-button>-->
+        <el-button type="default" icon="el-icon-eye" @click="showText()">显示/隐藏坐标</el-button>
       </el-button-group>
     </el-card>
 
@@ -211,7 +211,7 @@ export default {
         }
       },
       // text
-      textArr: [],
+      textMesh: undefined,
       textVisible: true
       // pointMap: {}
     }
@@ -241,9 +241,7 @@ export default {
         })
     },
     showText() {
-      this.textArr.forEach(mesh => {
-        mesh.visible = !this.textVisible
-      })
+      this.textMesh.visible = !this.textVisible
       this.textVisible = !this.textVisible
     },
     getOrCreateTweenByVehicleName(name, startPos) {
@@ -667,7 +665,9 @@ export default {
       function createText() {
         const textArr = []
         const materials = new THREE.MeshBasicMaterial({
-          color: 'rgb(254,251,231)'
+          color: 'rgb(254,251,231)',
+          transparent: true,
+          opacity: 0.6
         })
         for (let i = 0; i < 5; i++) {
           for (let j = 0; j < 4; j++) {
@@ -688,6 +688,7 @@ export default {
         }
         const bufferGeometries = BufferGeometryUtils.mergeBufferGeometries(textArr)
         const mesh = new THREE.Mesh(bufferGeometries, materials)
+        this_.textMesh = mesh
         scene.add(mesh)
       }
       function getPointTextGeoByPos(textGeo, column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, materials) {

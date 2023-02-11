@@ -186,6 +186,9 @@ export function getPointText(THREE, textGeo, font, size, height, x, y, z, materi
   // mesh.position.set(x, y, z)
   // mesh.rotation.x = -Math.PI / 2.0
   // mesh.rotation.y = 0
+
+  // 这里必须先绕x轴旋转，再进行位移
+  textGeo.rotateX(-Math.PI / 2.0)
   textGeo.translate(x, y, z)
 
   return textGeo
