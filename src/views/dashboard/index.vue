@@ -138,10 +138,11 @@ import { mapGetters } from 'vuex'
 // import editorDashboard from './editor'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-// import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 // import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { TWEEN } from 'three/examples/jsm/libs/tween.module.min.js'
-// import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import {
   getAmbientLight,
   getBase,
@@ -152,7 +153,7 @@ import {
   getConveyor,
   getDirectLight,
   getFloor,
-  getHouse,
+  getHouse, getPointText,
   getRack,
   getRackGroup,
   getRenderer, getRGV,
@@ -663,6 +664,57 @@ export default {
       scene.add(testBinMesh)
 
       // updateCurvePathPosition(testBinMesh, curvePath, 0, axis, upTestBin, testBinY);
+      function createText() {
+        const textArr = []
+        const materials = new THREE.MeshBasicMaterial({
+          color: 'rgb(254,251,231)'
+        })
+        for (let i = 0; i < 5; i++) {
+          for (let j = 0; j < 4; j++) {
+            for (let k = 0; k < 5; k++) {
+              const textGeo = new TextGeometry('(' + i + ',' + k + ',' + j + ')', {
+                font: font,
+                size: size,
+                height: height
+                // curveSegments: curveSegments,
+                // bevelThickness: bevelThickness,
+                // bevelSize: bevelSize,
+                // bevelEnabled: bevelEnabled
+              })
+              const textGeoByPos = getPointTextGeoByPos(textGeo, (i + 1), (j + 1), (k + 1), rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, materials)
+              textArr.push(textGeoByPos)
+            }
+          }
+        }
+        const bufferGeometries = BufferGeometryUtils.mergeBufferGeometries(textArr)
+        const mesh = new THREE.Mesh(bufferGeometries, materials)
+        scene.add(mesh)
+      }
+      function getPointTextGeoByPos(textGeo, column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, materials) {
+        const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + 10
+        const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + boardHeight / 2 - height / 2
+        const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval - 10
+        return getPointText(THREE, textGeo, font, size, height, initX, initY, initZ, materials)
+      }
+      // function addBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH) {
+      //   const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + rackWidth / 2
+      //   const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + binD / 2 + shuttleH
+      //   const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval / 2
+      //   const binMesh = getBin(THREE, initX, initY, initZ, binD, binD, binD, binTx)
+      //   scene.add(binMesh)
+      //   return binMesh
+      // }
+      let font
+      const fontName = 'optimer' // helvetiker, optimer, gentilis, droid sans, droid serif
+      const fontWeight = 'bold' // normal bold
+      const fontLoader = new FontLoader()
+      const size = 5
+      const height = 0.1
+      fontLoader.load('fonts/' + fontName + '_' + fontWeight + '.typeface.json', function(response) {
+        font = response
+
+        createText()
+      })
 
       // 测试移动入库
       function testPuttingIn() {
@@ -831,79 +883,6 @@ export default {
         scene.add(shuttleMesh)
         return shuttleMesh
       }
-
-      // let font
-      // const fontName = 'optimer' // helvetiker, optimer, gentilis, droid sans, droid serif
-      // const fontWeight = 'bold' // normal bold
-      // const fontLoader = new FontLoader()
-      // const size = 5
-      // const height = 0.1
-      // fontLoader.load('fonts/' + fontName + '_' + fontWeight + '.typeface.json', function(response) {
-      //   font = response
-      //
-      //   // createText()
-      // })
-      // function createText() {
-      //   for (let i = 0; i < 5; i++) {
-      //     for (let j = 0; j < 4; j++) {
-      //       for (let k = 0; k < 5; k++) {
-      //         const textGeo = new TextGeometry('(' + i + ',' + k + ',' + j + ')', {
-      //           font: font,
-      //           size: size,
-      //           height: height
-      //           // curveSegments: curveSegments,
-      //           // bevelThickness: bevelThickness,
-      //           // bevelSize: bevelSize,
-      //           // bevelEnabled: bevelEnabled
-      //         })
-      //         addPointText(textGeo, (i + 1), (j + 1), (k + 1), rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, 'rgb(254,251,231)')
-      //         // mesh.visible = true
-      //         // this_.textArr.push(mesh)
-      //       }
-      //     }
-      //   }
-      //   // for (const coordKey in map) {
-      //   //   const split = coordKey.split(',')
-      //   //   const srcX = Number(split[0])
-      //   //   const srcY = Number(split[1])
-      //   //   const srcZ = Number(split[2])
-      //   //   // 重置位置相关参数
-      //   //   const c = srcX + 1
-      //   //   const l = srcZ + 1
-      //   //   const r = srcY + 1
-      //   //   const pointNameValue = map[coordKey] + ''
-      //   //   console.log(pointNameValue)
-      //   //   console.log(c, l, r)
-      //   //   const textGeo = new TextGeometry(pointNameValue, {
-      //   //     font: font,
-      //   //     size: size,
-      //   //     height: height
-      //   //     // curveSegments: curveSegments,
-      //   //     // bevelThickness: bevelThickness,
-      //   //     // bevelSize: bevelSize,
-      //   //     // bevelEnabled: bevelEnabled
-      //   //   })
-      //   //   const mesh = addPointText(textGeo, c, l, r, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, 'rgb(254,251,231)')
-      //   //   mesh.visible = true
-      //   //   this_.textArr.push(mesh)
-      //   // }
-      // }
-      // function addPointText(textGeo, column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, color) {
-      //   const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + 10
-      //   const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + boardHeight / 2 - height / 2
-      //   const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval - 10
-      //   const pointText = getPointText(THREE, textGeo, font, size, height, initX, initY, initZ, color)
-      //   scene.add(pointText)
-      //   return pointText
-      // }
-      // function addBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH) {
-      //   const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + rackWidth / 2
-      //   const initY = rackGroupMesh.position.y - heightInterval * (boardNumber - 1) / 2 + heightInterval * (layer - 1) + binD / 2 + shuttleH
-      //   const initZ = rackGroupMesh.position.z + depthInterval * (stickNumber - 1) / 2 - depthInterval * rank + depthInterval / 2
-      //   const binMesh = getBin(THREE, initX, initY, initZ, binD, binD, binD, binTx)
-      //   scene.add(binMesh)
-      //   return binMesh
-      // }
 
       function getPositionOfBin(column, layer, rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, binD, shuttleH) {
         const initX = rackGroupMesh.position.x + rackWidth * rackNumber / 2 - rackWidth * column + rackWidth / 2
