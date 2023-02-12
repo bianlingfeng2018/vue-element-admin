@@ -79,14 +79,14 @@ export function preMoveFront(agv, pos, tween) {
   let rank = pos.rank
   const column = pos.column
   const layer = pos.layer
-  rank = rank - 1 < 1 ? 1 : (rank - 1 / 2) // 因为是预判，所以只移动一半距离，当小车真正到达下一个点时才更新位置
+  rank = rank - 1 < 1 ? 1 : (rank - 3 / 4) // 因为是预判，所以只移动一半距离，当小车真正到达下一个点时才更新位置
   moveAGV(agv, column, layer, rank, tween)
 }
 export function preMoveBehind(agv, pos, tween, stickNumber) {
   let rank = pos.rank
   const column = pos.column
   const layer = pos.layer
-  rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 1 / 2
+  rank = rank + 1 > stickNumber - 1 ? stickNumber - 1 : rank + 3 / 4
   moveAGV(agv, column, layer, rank, tween)
 }
 
@@ -94,7 +94,7 @@ export function preMoveLeft(agv, pos, tween, rackNumber) {
   const rank = pos.rank
   let column = pos.column
   const layer = pos.layer
-  column = column + 1 > rackNumber ? rackNumber : column + 1 / 2
+  column = column + 1 > rackNumber ? rackNumber : column + 3 / 4
   moveAGV(agv, column, layer, rank, tween)
 }
 
@@ -102,12 +102,12 @@ export function preMoveRight(agv, pos, tween) {
   const rank = pos.rank
   let column = pos.column
   const layer = pos.layer
-  column = column - 1 < 1 ? 1 : column - 1 / 2
+  column = column - 1 < 1 ? 1 : column - 3 / 4
   moveAGV(agv, column, layer, rank, tween)
 }
 
 function moveAGV(agv, column, layer, rank, tween) {
-  tween.to(window.getAGVPosition(column, layer, rank), 5000)
+  tween.to(window.getAGVPosition(column, layer, rank), 6000)
     .onComplete(() => {})
     .start()
 }
