@@ -1,3 +1,33 @@
+
+/**
+ * 让对象在曲线上移动到特定的比例的点
+ * @param obj
+ * @param curvePath
+ * @param fraction
+ * @param axis
+ * @param up
+ * @param yOffset
+ */
+export function setObjPositionOnCurvePath(obj, curvePath, fraction, axis, up, yOffset) {
+  if (fraction > 1) fraction = 0
+  const newPosition = curvePath.getPoint(fraction)
+  const tangent = curvePath.getTangent(fraction)
+  newPosition.y = yOffset
+  obj.position.copy(newPosition)
+  axis.crossVectors(up, tangent).normalize()
+  const radians = Math.acos(up.dot(tangent))
+  obj.quaternion.setFromAxisAngle(axis, radians)
+}
+
+/**
+ * 让对象从源点逐步过渡到目标点
+ * @param agv
+ * @param name
+ * @param src
+ * @param dest
+ * @param pos
+ * @param t
+ */
 export function move(agv, name, src, dest, pos, t) {
   const srcX = Number(src.x)
   const srcY = Number(src.y)

@@ -163,7 +163,7 @@ import {
 } from '@/views/dashboard/js/Common'
 import { queryVehiclesState } from '@/api/asrs-sync'
 import { queryPointList } from '@/api/asrs-model'
-import { move } from '@/views/dashboard/js/CommonMove'
+import { move, setObjPositionOnCurvePath } from '@/views/dashboard/js/CommonMove'
 
 export default {
   name: 'Dashboard',
@@ -206,6 +206,28 @@ export default {
             column: 1,
             layer: 1,
             rank: 1
+          },
+          tween: undefined
+        },
+        'VehicleRGV001': {
+          pos: {
+            x: 0,
+            y: 0,
+            z: 0
+          },
+          modelPos: {
+            frac: 0.1
+          },
+          tween: undefined
+        },
+        'VehicleRGV002': {
+          pos: {
+            x: 0,
+            y: 0,
+            z: 0
+          },
+          modelPos: {
+            frac: 0.2
           },
           tween: undefined
         }
@@ -355,13 +377,31 @@ export default {
 
               this_.agvState[name].pos = cur
 
-              this_.updateVehiclePosition(name, cur, next)
+              // 当z=-1，则为RGV坐标
+              // RGV坐标x表示fraction，y没有含义，z=-1表示为RGV坐标
+              if (cur.z === -1) {
+                this_.updateVehicleRGVPosition(name, cur, next)
+              } else {
+                this_.updateVehiclePosition(name, cur, next)
+              }
             }
           })
           .catch(reason => {
             console.log(reason)
           })
       }, 1000)
+    },
+    updateVehicleRGVPosition(name, curPos, nextPos) {
+      // 直接更新位置
+      const curFrac = curPos.x / 10.0
+      console.log('更新RGV ' + name + ', ' + curPos.x + ',' + curPos.y + ',' + curPos.z)
+      const RGV = window.getRGVByName(name)
+      this.agvState[name].tween = false
+      window.setRGVPos(RGV, name, curFrac)
+      // 向下一个点提前移动位置
+      if (nextPos != null) {
+        //
+      }
     },
     updateVehiclePosition(name, curPos, nextPos) {
       // 直接更新位置
@@ -609,6 +649,15 @@ export default {
       const shuttle001 = addShuttle(this_.agvState['Vehicle001'].modelPos.column, this_.agvState['Vehicle001'].modelPos.layer, this_.agvState['Vehicle001'].modelPos.rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, '0xAFB1B3')
       const testShuttle = addShuttle(this_.agvState['Vehicle002'].modelPos.column, this_.agvState['Vehicle002'].modelPos.layer, this_.agvState['Vehicle002'].modelPos.rank, rackGroupMesh, rackWidth, heightInterval, depthInterval, rackNumber, boardNumber, stickNumber, shuttleW, shuttleH, shuttleD, 'lightblue')
 
+      window.getRGVByName = function getRGVByName(name) {
+        if (name === 'VehicleRGV001') {
+          return RGV
+        } else if (name === 'VehicleRGV002') {
+          return VehicleRGV002
+        }
+        return null
+      }
+
       window.getVehicleByName = function getVehicleByName(name) {
         if (name === 'Vehicle001') {
           return shuttle001
@@ -809,15 +858,18 @@ export default {
       //   console.error(error)
       // })
 
-      const initF = 0.75
+      const initF = 0.1
       const yOffset = 5
-      const RGV = getRGV(THREE, 100, 0, 0, 40, 10, 20, binTx)
+      const RGV = getRGV(THREE, 100, 0, 0, 40, 10, 20, 'blue')
+      const VehicleRGV002 = getRGV(THREE, 100, 0, 0, 40, 10, 20, 'yellow')
       scene.add(RGV)
+      scene.add(VehicleRGV002)
 
       modelLoaded = true
 
       // 初始化RGV在环轨上的位置及方向
       updateCurvePathPosition(RGV, curvePath, initF, axis, upRGV, yOffset)
+      updateCurvePathPosition(VehicleRGV002, curvePath, 0.2, axis, upRGV, yOffset)
 
       // axes
       const axesHelper = new THREE.AxesHelper(1000)
@@ -922,6 +974,11 @@ export default {
       let ElevatorLoadedShutter = false
       const ElevatorLoadedBin = false
       let ElevatorRunning = false
+      window.setRGVPos = function setRGVPos(RGV, name, fraction) {
+        this_.agvState[name].modelPos.frac = fraction
+        setObjPositionOnCurvePath(RGV, curvePath, fraction, axis, upRGV, yOffset)
+      }
+
       window.onMoveForward = function onMoveForward() {
         if (RGVRunning) {
           clearInterval(timer)
